@@ -102,7 +102,7 @@ function getUser(requestName, callback) {
         let retrievedUser = { ...data.Items[0] };
         delete retrievedUser.userId;
         delete retrievedUser.userPassword;
-        console.log("returning user:", retrievedUser);
+        console.log("the returning user:", retrievedUser);
         callback(null, retrievedUser);
       }
     }

@@ -120,19 +120,6 @@ app.put("/api/users/:id", (req, res) => {
     if (err) {
       sendFailure(res, err);
     } else {
-      // Validate
-      /* const schema = {
-        userName: Joi.string().required(),
-        userFirstName: Joi.string(),
-        userLastName: Joi.string(),
-        userPassword: Joi.string()
-      };
-      const result = Joi.validate(req.body, schema);
-      //bad requet - 400
-      if (result.error) {
-        sendFailure(res, new makeError(400, result.error.details[0].message));
-        return;
-      } */
       validation(req, err => {
         if (err) {
           sendFailure(res, err);
