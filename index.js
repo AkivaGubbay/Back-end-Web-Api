@@ -1,10 +1,19 @@
 const Joi = require("joi");
 const uuidv1 = require("uuid/v1");
 const express = require("express"); //returns a function
+var cors = require("cors");
 const app = express();
+
+// Fixes error: CORS
+app.use(cors());
 
 // Enables json in a request body
 app.use(express.json());
+
+const {
+  USER_ID,
+  USER_CREATE_DATE /* TABLE_NAME, USER_NAME, INDEX_USER_NAME, USER_FIRST_NAME, USER_LAST_NAME, USER_PASSWORD */
+} = require("./Constants");
 
 // Importing DAL functions
 const {
@@ -15,8 +24,6 @@ const {
   exist,
   alterUser,
   deleteUser,
-  userId,
-  userCreateDate,
   makeError // This shoule only be in the DAL!!!
 } = require("./DAL");
 
@@ -54,6 +61,7 @@ function validation(req, callback) {
 // ------------------------------ GET ------------------------------
 
 app.get("/api/users", (req, res) => {
+  console.log("webApi: GET -  all users ...");
   getAllUsers((err, allCustomers) => {
     if (err) {
       sendFailure(res, err);
@@ -65,6 +73,9 @@ app.get("/api/users", (req, res) => {
 
 app.get("/api/users/:id", (req, res) => {
   const name = req.params.id.toString();
+
+  console.log(`webApi: GET - user: ${name} ...`);
+
   console.log("getting user: ", name);
   getUser(name, (err, retrievedUser) => {
     if (err) {
@@ -78,6 +89,8 @@ app.get("/api/users/:id", (req, res) => {
 // ------------------------------ POST ------------------------------
 
 app.post("/api/users", (req, res) => {
+  console.log(`webApi: entered POST ...`);
+
   validation(req, err => {
     if (err) {
       sendFailure(res, err);
@@ -91,9 +104,9 @@ app.post("/api/users", (req, res) => {
       } else {
         // Create the user request
         const user = { ...req.body };
-        user[userId] = String(uuidv1()); // The id type is set to 'string' in the db
-        user[userCreateDate] = String(new Date());
-        console.log("user request:\n", user);
+        user[USER_ID] = String(uuidv1()); // The id type is set to 'string' in the db
+        user[USER_CREATE_DATE] = String(new Date());
+        console.log("webApi:  POST - user request:\n", user.userName);
 
         //add the new user to db
         addUser(user, err => {
@@ -113,6 +126,8 @@ app.post("/api/users", (req, res) => {
 // ------------------------------ PUT -------------------------------
 
 app.put("/api/users/:id", (req, res) => {
+  console.log(`webApi: entered PUT ...`);
+
   // Look up the user
   // If doesn't exist, return 404
   const targetName = req.params.id.toString();
@@ -127,6 +142,8 @@ app.put("/api/users/:id", (req, res) => {
         }
         // Update requiered fields here
         const updatedUser = { ...req.body };
+
+        console.log(`webApi: PUT - user: ${updatedUser.userName} ...`);
 
         alterUser(targetId, updatedUser, (err, updatedUserName) => {
           if (err) {
@@ -144,6 +161,8 @@ app.put("/api/users/:id", (req, res) => {
 // ------------------------------ DELETE -----------------------------
 
 app.delete("/api/users/:id", (req, res) => {
+  console.log(`webApi: entered DELETE ...`);
+
   const targetName = req.params.id.toString();
   exist(targetName, (err, targetId) => {
     if (err) {
@@ -168,7 +187,7 @@ app.delete("/api/users/:id", (req, res) => {
 console.log("web-api running ...");
 
 //use the port number of the PORT env variable otherwise use 3000
-const port = process.env.port || 3000;
+const port = process.env.port || 3005;
 
 //listen on port
 console.log(`connecting to port: ${port} ...`);

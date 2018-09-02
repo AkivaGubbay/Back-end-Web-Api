@@ -1,3 +1,14 @@
+const {
+  TABLE_NAME,
+  USER_ID,
+  USER_NAME,
+  INDEX_USER_NAME,
+  USER_FIRST_NAME,
+  USER_LAST_NAME,
+  USER_PASSWORD,
+  USER_CREATE_DATE
+} = require("./Constants");
+
 // Used for dynamodb communication
 const AWS = require("aws-sdk");
 
@@ -5,18 +16,6 @@ AWS.config.update({
   region: "us-west-2",
   endpoint: "http://localhost:8000"
 });
-
-// db table attributes
-// const userTable = {};
-const tableName = "Users";
-const userId = "userId";
-const userName = "userName";
-const indexUserName = "indexUserName";
-// non key attributes
-const userFirstName = "userFirstName";
-const userLastName = "userLastName";
-const userPassword = "userPassword";
-const userCreateDate = "userCreateDate";
 
 function makeError(err, msg) {
   // Used in both
@@ -30,14 +29,14 @@ module.exports.makeError = makeError; // Goal: this should only be in the DAL
 // ------------------- GET helper functions -------------------
 
 // Scan the whole table without a 'filterExpression'
-function getAllUsers(callback) {
+module.exports.getAllUsers = callback => {
   const docClient = new AWS.DynamoDB.DocumentClient();
 
   var params = {
-    TableName: tableName,
+    TableName: TABLE_NAME,
     ProjectionExpression: "#name",
     ExpressionAttributeNames: {
-      "#name": userName
+      "#name": USER_NAME
     }
   };
 
@@ -66,17 +65,17 @@ function getAllUsers(callback) {
       callback(null, users);
     }
   });
-}
+};
 
-function getUser(requestName, callback) {
+module.exports.getUser = (requestName, callback) => {
   const docClient = new AWS.DynamoDB.DocumentClient();
   console.log("entering dal looking for ", requestName);
   var params = {
-    TableName: tableName,
-    IndexName: indexUserName,
+    TableName: TABLE_NAME,
+    IndexName: INDEX_USER_NAME,
     KeyConditionExpression: "#name = :reqName",
     ExpressionAttributeNames: {
-      "#name": userName
+      "#name": USER_NAME
     },
     ExpressionAttributeValues: {
       ":reqName": requestName
@@ -102,22 +101,24 @@ function getUser(requestName, callback) {
         let retrievedUser = { ...data.Items[0] };
         delete retrievedUser.userId;
         delete retrievedUser.userPassword;
+        // Not sure if to return the createDate
+        delete retrievedUser.userCreateDate;
         console.log("the returning user:", retrievedUser);
         callback(null, retrievedUser);
       }
     }
   });
-}
+};
 
 // ------------------- POST helper functions -------------------
 
-function addUser(user, callback) {
+module.exports.addUser = (user, callback) => {
   const docClient = new AWS.DynamoDB.DocumentClient();
 
   console.log("adding user:", user);
 
   var params = {
-    TableName: tableName,
+    TableName: TABLE_NAME,
     Item: user
   };
 
@@ -135,19 +136,19 @@ function addUser(user, callback) {
       callback(null);
     }
   });
-}
+};
 
-function alreadyExists(requestName, callback) {
+module.exports.alreadyExists = (requestName, callback) => {
   const docClient = new AWS.DynamoDB.DocumentClient();
 
   console.log(`checking if user name:${requestName} already exists`);
 
   var params = {
-    TableName: tableName,
-    IndexName: indexUserName,
+    TableName: TABLE_NAME,
+    IndexName: INDEX_USER_NAME,
     KeyConditionExpression: "#name = :reqName",
     ExpressionAttributeNames: {
-      "#name": userName
+      "#name": USER_NAME
     },
     ExpressionAttributeValues: {
       ":reqName": requestName
@@ -178,19 +179,19 @@ function alreadyExists(requestName, callback) {
       }
     }
   });
-}
+};
 
 // ------------------- PUT helper functions -------------------
 
-function exist(targetName, callback) {
+module.exports.exist = (targetName, callback) => {
   const docClient = new AWS.DynamoDB.DocumentClient();
 
   var params = {
-    TableName: tableName,
-    IndexName: indexUserName,
+    TableName: TABLE_NAME,
+    IndexName: INDEX_USER_NAME,
     KeyConditionExpression: "#name = :trgName",
     ExpressionAttributeNames: {
-      "#name": userName
+      "#name": USER_NAME
     },
     ExpressionAttributeValues: {
       ":trgName": targetName
@@ -220,23 +221,23 @@ function exist(targetName, callback) {
       }
     }
   });
-}
+};
 
-function alterUser(targetId, updatedUser, callback) {
+module.exports.alterUser = (targetId, updatedUser, callback) => {
   const docClient = new AWS.DynamoDB.DocumentClient();
   console.log("updated user: ", updatedUser);
   var params = {
-    TableName: tableName,
+    TableName: TABLE_NAME,
     Key: {
       userId: targetId
     },
     UpdateExpression:
       "set #oldName = :newName, #fn = :fn, #ln = :ln, #pwd = :pwd",
     ExpressionAttributeNames: {
-      "#oldName": userName,
-      "#fn": userFirstName,
-      "#ln": userLastName,
-      "#pwd": userPassword
+      "#oldName": USER_NAME,
+      "#fn": USER_FIRST_NAME,
+      "#ln": USER_LAST_NAME,
+      "#pwd": USER_PASSWORD
     },
     ExpressionAttributeValues: {
       ":newName": updatedUser.userName,
@@ -263,15 +264,15 @@ function alterUser(targetId, updatedUser, callback) {
       callback(null, retrievedUser);
     }
   });
-}
+};
 
 // ------------------ DELETE helper functions ------------------
 
-function deleteUser(targetId, targetName, callback) {
+module.exports.deleteUser = (targetId, targetName, callback) => {
   const docClient = new AWS.DynamoDB.DocumentClient();
 
   var params = {
-    TableName: tableName,
+    TableName: TABLE_NAME,
     Key: {
       userId: targetId
     }
@@ -289,20 +290,4 @@ function deleteUser(targetId, targetName, callback) {
       callback(null);
     }
   });
-}
-
-// ~~~~~~~ Exporting DAL functions ~~~~~~~
-
-module.exports.getAllUsers = getAllUsers;
-module.exports.getUser = getUser;
-
-module.exports.addUser = addUser;
-module.exports.alreadyExists = alreadyExists;
-
-module.exports.exist = exist;
-module.exports.alterUser = alterUser;
-
-module.exports.deleteUser = deleteUser;
-
-module.exports.userId = userId;
-module.exports.userCreateDate = userCreateDate;
+};
