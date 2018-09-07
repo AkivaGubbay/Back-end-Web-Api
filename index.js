@@ -20,7 +20,6 @@ const {
   getAllUsers,
   getUser,
   addUser,
-  alreadyExists,
   exist,
   alterUser,
   deleteUser,
@@ -41,7 +40,7 @@ function sendFailure(res, err) {
   res.status(err.code).send(output);
 }
 
-// ------------------------------ Validation ------------------------------
+// ------------------------------ helper functions ------------------------------
 
 function validation(req, callback) {
   // create a joi schema for input validation
@@ -56,6 +55,23 @@ function validation(req, callback) {
   if (result.error) {
     callback(new makeError(400, result.error.details[0].message));
   } else callback(null);
+}
+
+function validAndUnique(req, res, callback) {
+  validation(req, err => {
+    if (err) {
+      sendFailure(res, err);
+      return;
+    }
+
+    exist(req.body.userName, (ServerErr, alreadyExists) => {
+      if (ServerErr) {
+        sendFailure(res, serverErr);
+      } else {
+        callback(alreadyExists);
+      }
+    });
+  });
 }
 
 // ------------------------------ GET ------------------------------
@@ -88,36 +104,40 @@ app.get("/api/users/:id", (req, res) => {
 
 // ------------------------------ POST ------------------------------
 
-app.post("/api/users", (req, res) => {
-  console.log(`webApi: entered POST ...`);
+app.post("/api/users/login", (req, res) => {
+  console.log("POST - Trying to login user: ", req.body.userName);
 
-  validation(req, err => {
-    if (err) {
-      sendFailure(res, err);
+  validAndUnique(req, res, () => {
+    console.log("finished validating and checking that it's unique ...");
+    sendSuccess(res, req.body);
+  });
+});
+
+app.post("/api/users", (req, res) => {
+  validAndUnique(req, res, alreadyExists => {
+    if (alreadyExists) {
+      const notUniqueNameError = new makeError(
+        400,
+        `user name: ${req.body.userName} has already been used.`
+      );
+      sendFailure(res, notUniqueNameError);
       return;
     }
 
-    // Check user name doesn't already exist
-    alreadyExists(req.body.userName, err => {
+    // Create the user request
+    const user = { ...req.body };
+    user[USER_ID] = String(uuidv1()); // The id type is set to 'string' in the db
+    user[USER_CREATE_DATE] = String(new Date());
+    console.log("webApi:  POST - user request:\n", user.userName);
+
+    //add the new user to db
+    addUser(user, err => {
+      // CHECK!!!! Maybe problem with seeing req, res objects from callback within callback
       if (err) {
         sendFailure(res, err);
       } else {
-        // Create the user request
-        const user = { ...req.body };
-        user[USER_ID] = String(uuidv1()); // The id type is set to 'string' in the db
-        user[USER_CREATE_DATE] = String(new Date());
-        console.log("webApi:  POST - user request:\n", user.userName);
-
-        //add the new user to db
-        addUser(user, err => {
-          // CHECK!!!! Maybe problem with seeing req, res objects from callback within callback
-          if (err) {
-            sendFailure(res, err);
-          } else {
-            //send the newly stored object back to client
-            sendSuccess(res, user.userName);
-          }
-        });
+        //send the newly stored object back to client
+        sendSuccess(res, user.userName);
       }
     });
   });
@@ -131,9 +151,16 @@ app.put("/api/users/:id", (req, res) => {
   // Look up the user
   // If doesn't exist, return 404
   const targetName = req.params.id.toString();
-  exist(targetName, (err, targetId) => {
-    if (err) {
-      sendFailure(res, err);
+  exist(targetName, (severErr, targetId) => {
+    if (severErr) {
+      //sever error
+      sendFailure(res, severErr);
+    } else if (!targetId) {
+      const noSuchUserErr = new makeError(
+        400,
+        `user name: ${req.body.userName} does NOT exist.`
+      );
+      sendFailure(res, noSuchUserErr);
     } else {
       validation(req, err => {
         if (err) {

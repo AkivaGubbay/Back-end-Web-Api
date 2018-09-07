@@ -24,6 +24,15 @@ function makeError(err, msg) {
   return e;
 }
 
+// Return user without id and password
+function secureUserInfo(user) {
+  delete user.userId;
+  delete user.userPassword;
+  // Not sure if to return the createDate
+  delete user.userCreateDate;
+  return user;
+}
+
 module.exports.makeError = makeError; // Goal: this should only be in the DAL
 
 // ------------------- GET helper functions -------------------
@@ -97,14 +106,10 @@ module.exports.getUser = (requestName, callback) => {
           new makeError(404, `No customer by the name: ${requestName}`, null)
         );
       } else {
-        // Return user without id and password
         let retrievedUser = { ...data.Items[0] };
-        delete retrievedUser.userId;
-        delete retrievedUser.userPassword;
-        // Not sure if to return the createDate
-        delete retrievedUser.userCreateDate;
-        console.log("the returning user:", retrievedUser);
-        callback(null, retrievedUser);
+        const secureUser = secureUserInfo(retrievedUser);
+        console.log("the returning user:", secureUser);
+        callback(null, secureUser);
       }
     }
   });
@@ -138,7 +143,7 @@ module.exports.addUser = (user, callback) => {
   });
 };
 
-module.exports.alreadyExists = (requestName, callback) => {
+/* module.exports.alreadyExists = (requestName, callback) => {
   const docClient = new AWS.DynamoDB.DocumentClient();
 
   console.log(`checking if user name:${requestName} already exists`);
@@ -174,12 +179,11 @@ module.exports.alreadyExists = (requestName, callback) => {
       }
       // The requested customer name is unique
       else {
-        console.log("ok4");
         callback(null);
       }
     }
   });
-};
+}; */
 
 // ------------------- PUT helper functions -------------------
 
@@ -205,15 +209,11 @@ module.exports.exist = (targetName, callback) => {
         500,
         "Unable to query. Error" + JSON.stringify(err, null, 2)
       );
-      callback(serverError, null);
+      callback(serverError);
     } else {
       if (data.Items.length == 0) {
         // No such customer
-        var noUserError = new makeError(
-          404,
-          `user name: ${targetName} does NOT exist.`
-        );
-        callback(noUserError, null);
+        callback(null, null);
       }
       // Return user id
       else {
@@ -258,10 +258,9 @@ module.exports.alterUser = (targetId, updatedUser, callback) => {
       // Return user without id and password
       console.log("data.Attributes", data.Attributes);
       let retrievedUser = { ...data.Attributes };
-      delete retrievedUser.userId;
-      delete retrievedUser.userPassword;
-      console.log("retrievedUser", retrievedUser);
-      callback(null, retrievedUser);
+      const secureUser = secureUserInfo(retrievedUser);
+      console.log("the returning user:", secureUser);
+      callback(null, secureUser);
     }
   });
 };

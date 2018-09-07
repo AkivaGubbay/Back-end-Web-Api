@@ -1,17 +1,14 @@
-function foo(name) {
-  console.log("foo ...", name);
-}
+const A = {
+  _b: "b",
+  _c: "c"
+};
 
-function bar(name) {
-  console.log("bar ...", name);
-}
+const B = {
+  _c: "cc",
+  _d: "dd"
+};
 
-module.exports.foo = foo;
-module.exports.bar = bar;
+const ob = Object.assign({}, A, B);
 
-//let date = require("date-and-time");
-let now = new Date();
-//date.format(now, "YYYY/MM/DD HH:mm:ss");
-console.log(`my date: |${String(now)}|`);
-
-console.log("type of data: ", typeof String(now));
+console.log("ob: ", ob);
+console.log("B: ", B);
