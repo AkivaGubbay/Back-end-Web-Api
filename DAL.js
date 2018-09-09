@@ -143,50 +143,6 @@ module.exports.addUser = (user, callback) => {
   });
 };
 
-/* module.exports.alreadyExists = (requestName, callback) => {
-  const docClient = new AWS.DynamoDB.DocumentClient();
-
-  console.log(`checking if user name:${requestName} already exists`);
-
-  var params = {
-    TableName: TABLE_NAME,
-    IndexName: INDEX_USER_NAME,
-    KeyConditionExpression: "#name = :reqName",
-    ExpressionAttributeNames: {
-      "#name": USER_NAME
-    },
-    ExpressionAttributeValues: {
-      ":reqName": requestName
-    }
-  };
-
-  docClient.query(params, (err, data) => {
-    if (err) {
-      // Query faild
-      var serverError = new makeError(
-        500,
-        "Unable to query. Error" + JSON.stringify(err, null, 2)
-      );
-      callback(serverError);
-    } else {
-      if (data.Items.length != 0) {
-        // A customer with the requested name already exists
-        var notUniqueNameError = new makeError(
-          400,
-          `user name: ${requestName} has already been used.`
-        );
-        callback(notUniqueNameError);
-      }
-      // The requested customer name is unique
-      else {
-        callback(null);
-      }
-    }
-  });
-}; */
-
-// ------------------- PUT helper functions -------------------
-
 module.exports.exist = (targetName, callback) => {
   const docClient = new AWS.DynamoDB.DocumentClient();
 
@@ -203,25 +159,27 @@ module.exports.exist = (targetName, callback) => {
   };
 
   docClient.query(params, (err, data) => {
+    let serverError = null;
+    let existingUser = null;
     if (err) {
       // Query faild
-      var serverError = new makeError(
+      serverError = new makeError(
         500,
         "Unable to query. Error" + JSON.stringify(err, null, 2)
       );
-      callback(serverError);
-    } else {
-      if (data.Items.length == 0) {
-        // No such customer
-        callback(null, null);
-      }
-      // Return user id
-      else {
-        callback(null, data.Items[0].userId);
-      }
+    } else if (data.Items.length != 0) {
+      // Return user id and password
+      existingUser = {
+        userId: data.Items[0].userId,
+        userName: data.Items[0].userName,
+        userPassword: data.Items[0].userPassword
+      };
     }
+    callback(serverError, existingUser);
   });
 };
+
+// ------------------- PUT helper functions -------------------
 
 module.exports.alterUser = (targetId, updatedUser, callback) => {
   const docClient = new AWS.DynamoDB.DocumentClient();
@@ -290,3 +248,45 @@ module.exports.deleteUser = (targetId, targetName, callback) => {
     }
   });
 };
+
+/* module.exports.alreadyExists = (requestName, callback) => {
+  const docClient = new AWS.DynamoDB.DocumentClient();
+
+  console.log(`checking if user name:${requestName} already exists`);
+
+  var params = {
+    TableName: TABLE_NAME,
+    IndexName: INDEX_USER_NAME,
+    KeyConditionExpression: "#name = :reqName",
+    ExpressionAttributeNames: {
+      "#name": USER_NAME
+    },
+    ExpressionAttributeValues: {
+      ":reqName": requestName
+    }
+  };
+
+  docClient.query(params, (err, data) => {
+    if (err) {
+      // Query faild
+      var serverError = new makeError(
+        500,
+        "Unable to query. Error" + JSON.stringify(err, null, 2)
+      );
+      callback(serverError);
+    } else {
+      if (data.Items.length != 0) {
+        // A customer with the requested name already exists
+        var notUniqueNameError = new makeError(
+          400,
+          `user name: ${requestName} has already been used.`
+        );
+        callback(notUniqueNameError);
+      }
+      // The requested customer name is unique
+      else {
+        callback(null);
+      }
+    }
+  });
+}; */
